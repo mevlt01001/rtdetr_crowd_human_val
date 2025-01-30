@@ -40,9 +40,9 @@ for i, annotation in enumerate(annotations):
         result = model(img.image)# prediction
         allocated_memory = torch.cuda.memory_allocated() / 1e6# GPU memory
         _result = subprocess.check_output(['nvidia-smi', '--query-gpu=power.draw', '--format=csv,noheader,nounits'])# GPU watt
-        memory_info = psutil.virtual_memory()# RAM 
+        process = psutil.Process(os.getpid())# RAM 
         
-        used_ram = memory_info.used / 1e6
+        used_ram = process.memory_info().rss / 1e6
 
         preproces_ms = result[0].speed['preprocess']
         inference_ms = result[0].speed['inference']
@@ -105,7 +105,7 @@ average_total_latency = np.mean(total_ms_data)
 avg_gpu_usage = np.mean(gpu_data)
 avg_ram_usage = np.mean(ram_data)
 avg_watt_usage = np.mean(watt_data)
-average_precision = np.mean(precision)
+average_precision = np.trapz(y=precision, x=recall, dx=0.0001)
 
 os.system("clear")
 print(f"Average FPS: {average_fps:.4f}")
