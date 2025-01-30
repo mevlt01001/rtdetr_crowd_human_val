@@ -7,7 +7,10 @@ model = RTDETR('rtdetr-l.pt')
 img = image('273275,5d0330005d00a4c8', 'CrowdHuman_val/Images/273275,5d0330005d00a4c8.jpg')
 result = model(img.image)
 mask = result[0].boxes.data[:,-1] == 0
-results = result[0].boxes.data[mask]
+results = result[0]
+print(results)
+quit(1)
+
 img.load_pred_boxes(results)
 
 print(img.__str__())

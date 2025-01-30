@@ -65,8 +65,7 @@ class image:
 
 
     def iou(self, truth_box, pred_box):
-        SMOOTH = 1e-6
-        
+
         common_width = max(0, min(truth_box.x2, pred_box.x2) - max(truth_box.x1, pred_box.x1))
         common_height = max(0, min(truth_box.y2, pred_box.y2) - max(truth_box.y1, pred_box.y1))
         
@@ -75,7 +74,7 @@ class image:
         truth_area = (truth_box.x2 - truth_box.x1) * (truth_box.y2 - truth_box.y1)
         pred_area = (pred_box.x2 - pred_box.x1) * (pred_box.y2 - pred_box.y1)
         
-        union = truth_area + pred_area - intersection + SMOOTH
+        union = truth_area + pred_area - intersection
         
         iou = intersection / union
         return iou
