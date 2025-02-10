@@ -1,17 +1,18 @@
 import pandas as pd
 from ultralytics import RTDETR
 from eval import results_to_boxes
-from image import image#ros
 import numpy as np
 import json
 import os
 import matplotlib.pyplot as plt
 import torch
 import subprocess
-import psutil
+import psutil, cv2
 
 model = RTDETR('rtdetr-l.pt')
+
 annotation_file_path = 'CrowdHuman_val/annotation_person.odgt'
+
 with open(annotation_file_path, 'r') as file:
     annotations = [json.loads(line) for line in file]
 
@@ -35,9 +36,10 @@ for i, annotation in enumerate(annotations):
         print(annotation['ID'])
         print(f"{i+1}/{len(annotations)}")
         img_id = annotation['ID']
-        img = image(img_id, images_path + img_id + '.jpg')
+        img = cv2.imread(images_path + img_id + '.jpg')
         
-        result = model(img.image)# prediction
+        result = model(img)# prediction
+        
         allocated_memory = torch.cuda.memory_allocated() / 1e6# GPU memory
         _result = subprocess.check_output(['nvidia-smi', '--query-gpu=power.draw', '--format=csv,noheader,nounits'])# GPU watt
         process = psutil.Process(os.getpid())# RAM 
