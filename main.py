@@ -9,25 +9,14 @@ import torch
 import subprocess
 import psutil, cv2
 
-model = RTDETR('rtdetr-l.pt')
-
+model_path = "rtdetr-l.pt"
+images_path = 'CrowdHuman_val/Images/'
 annotation_file_path = 'CrowdHuman_val/annotation_person.odgt'
+
+model = RTDETR(model_path)
 
 with open(annotation_file_path, 'r') as file:
     annotations = [json.loads(line) for line in file]
-
-images_path = 'CrowdHuman_val/Images/'
-
-total_ms_data = []
-preproces_ms_data = []
-inference_ms_data = []
-postprocess_ms_data = []
-fps_data = []
-iou_data = []
-confision_matrix_data = []
-gpu_data = []
-ram_data = []
-watt_data = []
 
 for i, annotation in enumerate(annotations):
 
@@ -52,18 +41,7 @@ for i, annotation in enumerate(annotations):
         postprocess_ms = result[0].speed['postprocess']
         total_ms = preproces_ms + inference_ms + postprocess_ms
         
-        fps = 1000 / total_ms
-        power_values = [float(x) for x in _result.decode('utf-8').strip().split('\n')]
-
-        total_ms_data.append(total_ms)
-        preproces_ms_data.append(preproces_ms)        
-        inference_ms_data.append(inference_ms)        
-        postprocess_ms_data.append(postprocess_ms)
-        fps_data.append(fps)
-        watt_data.append(sum(power_values) / len(power_values))
-        gpu_data.append(allocated_memory)
-        ram_data.append(used_ram)        
-
+        power_values = [float(x) for x in _result.decode('utf-8').strip().split('\n')]     
 
         mask = result[0].boxes.data[:, -1] == 0
         results = result[0].boxes.data[mask]
@@ -71,41 +49,15 @@ for i, annotation in enumerate(annotations):
         odgt_line = {
             'ID': img_id,
             'truth_boxes': get_truth_boxes(img_id),# [x1, y1, x2, y2, class_id]
-            'pred_boxes': results_to_boxes(results)  # [x1, y1, x2, y2, score, pred_class]
+            'pred_boxes': results_to_boxes(results),  # [x1, y1, x2, y2, score, pred_class]
+            'preprocess_ms': preproces_ms,
+            'inference_ms': inference_ms,
+            'postprocess_ms': postprocess_ms,
+            'gpu_watt_usage': sum(power_values) / len(power_values),
+            'gpu_memory_usage': allocated_memory,
+            'ram_memory_usage': used_ram
         }
         
-        with open('pred_results.odgt', 'a') as f:
+        with open(f'{model_path}_results.odgt', 'a') as f:
             f.write(json.dumps(odgt_line) + '\n')
         
-        
-            
-    
-        
-        
-        
-
-        
-
-
-
-
-# average calculation
-
-average_fps = np.mean(fps_data)
-average_preprocess_latency = np.mean(preproces_ms_data)
-average_inference_latency = np.mean(inference_ms_data)
-average_postprocess_latency = np.mean(postprocess_ms_data)
-average_total_latency = np.mean(total_ms_data)
-avg_gpu_usage = np.mean(gpu_data)
-avg_ram_usage = np.mean(ram_data)
-avg_watt_usage = np.mean(watt_data)
-
-os.system("clear")
-print(f"Average FPS: {average_fps:.4f}")
-print(f"Average Preprocess Latency: {average_preprocess_latency:.4f} ms")
-print(f"Average Inference Latency: {average_inference_latency:.4f} ms")
-print(f"Average Postprocess Latency: {average_postprocess_latency:.4f} ms")
-print(f"Average Total Latency: {average_total_latency:.4f} ms")
-print(f"Average GPU Usage: {avg_gpu_usage:.4f} MB")
-print(f"Average RAM Usage: {avg_ram_usage:.4f} MB")
-print(f"Average Watt Usage: {avg_watt_usage:.4f} Watt")
