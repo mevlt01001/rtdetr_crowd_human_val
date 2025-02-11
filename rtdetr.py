@@ -3,8 +3,8 @@ import cv2
 
 model = RTDETR('rtdetr-l.pt')
 
-img = cv2.imread('CrowdHuman_val/Images/273275,5d0330005d00a4c8.jpg')
-result = model(img)
+img = cv2.imread('CrowdHuman_val/Images/282555,575650005a82ad49.jpg')
+result = model('CrowdHuman_val/Images/282555,575650005a82ad49.jpg')
 mask = result[0].boxes.data[:,-1] == 0
 results = result[0].boxes.data[mask]
 print(results)

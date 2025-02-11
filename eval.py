@@ -21,9 +21,10 @@ def get_truth_boxes(image, file_path='CrowdHuman_val/annotation_person.odgt'):
         if annotation['ID'] == image:
             for box in annotation['gtboxes']:
                 x1, y1, width, height = box['vbox']
-                boxes.append([x1, y1, x1 + width, y1 + height, box['tag']])
+                class_id = 0 if box['tag'] == 'person' else 1
+                boxes.append([x1, y1, x1 + width, y1 + height, class_id])
 
-    return np.array(boxes)
+    return boxes
 
 def iou(truth_box, pred_box):
     tx1, ty1, tx2, ty2 = truth_box[0], truth_box[1], truth_box[2], truth_box[3]
@@ -42,7 +43,7 @@ def results_to_boxes(results):
     for result in results:
         boxes.append([int(result[0].item()), int(result[1].item()), int(result[2].item()), int(result[3].item()), float(result[4].item()), int(result[5].item())])
 
-    return np.array(boxes)
+    return boxes
     
 def mAP(truth_boxes, pred_boxes, iou_threshold=0.5):
     pass

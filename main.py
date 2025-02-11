@@ -1,6 +1,6 @@
 import pandas as pd
 from ultralytics import RTDETR
-from eval import results_to_boxes
+from eval import results_to_boxes, get_truth_boxes
 import numpy as np
 import json
 import os
@@ -28,7 +28,6 @@ confision_matrix_data = []
 gpu_data = []
 ram_data = []
 watt_data = []
-truth_boxes_data = 0
 
 for i, annotation in enumerate(annotations):
 
@@ -36,7 +35,9 @@ for i, annotation in enumerate(annotations):
         print(annotation['ID'])
         print(f"{i+1}/{len(annotations)}")
         img_id = annotation['ID']
-        img = cv2.imread(images_path + img_id + '.jpg')
+        img = images_path + img_id + '.jpg'
+        
+        truth_boxes = get_truth_boxes(img_id)
         
         result = model(img)# prediction
         
@@ -66,36 +67,27 @@ for i, annotation in enumerate(annotations):
 
         mask = result[0].boxes.data[:, -1] == 0
         results = result[0].boxes.data[mask]
-        results = results_to_boxes(results)  # [x1, y1, x2, y2, score, pred_class]
-        img.load_pred_boxes(results)
-        img.find_truth_box(threshold=0.5)
-        ious, confision_matrix, truth_boxes = img.confision_matrix(iou_threshold=0.5)
-        print(f"{[iou for iou in ious]}, {confision_matrix}")
+        
+        odgt_line = {
+            'ID': img_id,
+            'truth_boxes': get_truth_boxes(img_id),# [x1, y1, x2, y2, class_id]
+            'pred_boxes': results_to_boxes(results)  # [x1, y1, x2, y2, score, pred_class]
+        }
+        
+        with open('pred_results.odgt', 'a') as f:
+            f.write(json.dumps(odgt_line) + '\n')
+        
+        
+            
+    
+        
+        
+        
 
-        iou_data.extend(ious)
-        confision_matrix_data.extend(confision_matrix)
-        truth_boxes_data += truth_boxes
+        
 
 
-data = np.array([iou_data, confision_matrix_data]).T
-sorted_indices = np.argsort(data[:, 0].astype(float))[::-1]  # Azalan sıra için [::-1]
-sorted_data = data[sorted_indices]
 
-data = pd.DataFrame(sorted_data, columns=['iou', 'value'])
-
-# get dummies
-data.info()
-data = pd.get_dummies(data, columns=['value'], prefix='', prefix_sep='')
-data = data.astype(float)
-data[data.columns.drop('iou')] = data[data.columns.drop('iou')].cumsum(axis=0)
-
-# recall and precision calculation accorting to TP, FP, FN
-
-data['recall'] = data['TP'] / truth_boxes_data
-data['precision'] = data['TP'] / (data['TP'] + data['FP'])
-
-recall = data['recall'].to_numpy()
-precision = data['precision'].to_numpy()
 
 # average calculation
 
@@ -107,7 +99,6 @@ average_total_latency = np.mean(total_ms_data)
 avg_gpu_usage = np.mean(gpu_data)
 avg_ram_usage = np.mean(ram_data)
 avg_watt_usage = np.mean(watt_data)
-average_precision = np.trapz(y=precision, x=recall, dx=0.0001)
 
 os.system("clear")
 print(f"Average FPS: {average_fps:.4f}")
@@ -118,17 +109,3 @@ print(f"Average Total Latency: {average_total_latency:.4f} ms")
 print(f"Average GPU Usage: {avg_gpu_usage:.4f} MB")
 print(f"Average RAM Usage: {avg_ram_usage:.4f} MB")
 print(f"Average Watt Usage: {avg_watt_usage:.4f} Watt")
-print(f"Average Precision: {average_precision:.4f}")
-
-import matplotlib.pyplot as plt
-
-plt.plot(data['recall'], data['precision'], label=f"AP: {average_precision:.4f}")
-plt.xlabel('Recall')
-plt.ylabel('Precision')
-plt.title('Precision-Recall Curve')
-plt.legend()
-plt.grid(True)
-plt.savefig('precision_recall_curve.png')
-plt.show()
-
-data.to_csv('data.csv', index=False)
